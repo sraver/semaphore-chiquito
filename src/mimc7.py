@@ -3,9 +3,7 @@ from chiquito.dsl import SuperCircuit, Circuit, StepType
 from chiquito.cb import eq, table
 from chiquito.util import F
 
-from src.mimc7_constants import ROUND_CONSTANTS
-
-ROUNDS = 91
+from src.mimc7_constants import ROUND_CONSTANTS, ROUNDS
 
 
 # It's the best practice to wrap all values in F, even though the `assign` functions automatically wrap values in F.

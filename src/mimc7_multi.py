@@ -4,9 +4,7 @@ from chiquito.dsl import SuperCircuit, Circuit, StepType
 from chiquito.cb import table, eq
 from chiquito.util import F
 
-from src.mimc7_constants import ROUND_CONSTANTS
-
-ROUNDS = 91
+from src.mimc7_constants import ROUND_CONSTANTS, ROUNDS
 
 MAX_LEVELS = 100
 
