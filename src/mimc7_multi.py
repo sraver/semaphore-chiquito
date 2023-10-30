@@ -148,7 +148,10 @@ class Mimc7MultiCircuit(Circuit):
         self.pragma_num_steps((ROUNDS + 2 - 1) * MAX_LEVELS)
 
         self.hashes_table = self.new_table(
-            table().add(self.enable_lookup).add(self.out)
+            table()
+            .add(self.enable_lookup)
+            .add(self.x)
+            .add(self.out)
         )
 
     def trace(self, x_values, k_value):

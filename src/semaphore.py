@@ -26,8 +26,12 @@ class SemaphoreHashes(StepType):
     def setup(self):
         self.result = self.internal("result")
         self.input = self.internal("input")
-        self.add_lookup(self.circuit.hashes_table.apply(1).apply(self.result))
-        # TODO add inputs to lookup table
+        self.add_lookup(
+            self.circuit.hashes_table
+            .apply(1)  # enable_lookup
+            .apply(99)  # TODO : this hardcoded value should make it fail
+            .apply(self.result)  # out
+        )
 
     def wg(self, clear_text, hash_result):
         self.assign(self.input, F(clear_text))
@@ -97,7 +101,7 @@ class SemaphoreSuperCircuit(SuperCircuit):
             hashes.append(result)
 
         self.map(self.mimc7_multi_circuit, x_values, k_value)
-        self.map(self.mtip_circuit, path_indices, hashes)
+        self.map(self.mtip_circuit, path_indices, x_values, hashes)
         self.map(
             self.semaphore_circuit,
             identity_nullifier,

@@ -15,27 +15,32 @@ N_LEVELS = 20
 class MtipStep(StepType):
     def setup(self):
         self.index = self.internal("index")
+        self.input = self.internal("input")
         self.result = self.internal("result")
         self.constr(eq(self.index * (to_expr(1) - self.index), 0))
 
-        # TODO: soundness lookup input
-
         self.transition(eq(self.result, self.circuit.hash.next()))
 
-        self.add_lookup(self.circuit.hashes_table.apply(1).apply(self.result))
+        self.add_lookup(
+            self.circuit.hashes_table
+            .apply(1)  # enable_lookup
+            .apply(1)  # TODO : this hardcoded value should make it fail
+            .apply(self.result)  # out
+        )
 
-    def wg(self, index, result, hash):
-        self.assign(self.index, F(index))
-        self.assign(self.result, F(result))
-        self.assign(self.circuit.hash, F(hash))
+    def wg(self, index_value, result_value, hash_value, input_value):
+        self.assign(self.input, F(input_value))
+        self.assign(self.index, F(index_value))
+        self.assign(self.result, F(result_value))
+        self.assign(self.circuit.hash, F(hash_value))
 
 
 class MtipLastStep(StepType):
     def setup(self):
         self.transition(eq(self.circuit.hash, self.circuit.hash.next()))
 
-    def wg(self, hash):
-        self.assign(self.circuit.hash, F(hash))
+    def wg(self, hash_value):
+        self.assign(self.circuit.hash, F(hash_value))
 
 
 class MtipCircuit(Circuit):
@@ -50,9 +55,9 @@ class MtipCircuit(Circuit):
         self.pragma_last_step(self.last_step)
         self.expose(self.hash, Last())
 
-    def trace(self, path_indices, hashes):
+    def trace(self, path_indices, inputs, hashes):
         for i in range(0, N_LEVELS):
-            self.add(self.step, path_indices[i], hashes[i + 1], hashes[i])
+            self.add(self.step, path_indices[i], hashes[i + 1], hashes[i], inputs[i])
         self.add(self.last_step, hashes[N_LEVELS])
 
 
@@ -85,7 +90,7 @@ class MtipSuperCircuit(SuperCircuit):
 
         # next circuit constraints the given hashes to exist on the lookup table,
         # that protects the MTIP circuit from using crafted hashes
-        self.map(self.mtip_circuit, path_indices, hashes)
+        self.map(self.mtip_circuit, path_indices, x_values, hashes)
 
     def mimc7(self, x_in_value, k_value):
         """
