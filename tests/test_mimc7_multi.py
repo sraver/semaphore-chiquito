@@ -30,15 +30,18 @@ MIMC7_HASHES = [
 
 class Mimc7MultiTests(unittest.TestCase):
     def test_basic(self):
-        mimc7 = Mimc7MultiSuperCircuit()
-        mimc7_multi_super_witness = mimc7.gen_witness(
-            [
-                F(1), F(2), F(3), F(4), F(5), F(6), F(7), F(8), F(9), F(10),
-                F(11), F(12), F(13), F(14), F(15), F(16), F(17), F(18), F(19), F(20),
-            ],
-            F(10)
-        )
+        # Arrange
+        inputs = [
+            F(1), F(2), F(3), F(4), F(5), F(6), F(7), F(8), F(9), F(10),
+            F(11), F(12), F(13), F(14), F(15), F(16), F(17), F(18), F(19), F(20),
+        ]
+        k_value = F(10)
 
+        # Act
+        mimc7 = Mimc7MultiSuperCircuit()
+        mimc7_multi_super_witness = mimc7.gen_witness(inputs, k_value)
+
+        # Assert
         columns = []
         step_instances = list(mimc7_multi_super_witness.values())[0].step_instances
         for step_index, step in enumerate(step_instances):
