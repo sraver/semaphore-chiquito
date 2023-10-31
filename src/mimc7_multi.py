@@ -132,21 +132,25 @@ class Mimc7Padding(StepType):
 # It's the best practice to wrap all values in F, even though the `assign` functions automatically wrap values in F.
 class Mimc7MultiCircuit(Circuit):
     def setup(self):
+        # defines signals
         self.x = self.forward("x")
         self.k = self.forward("k")
         self.row = self.forward("row")
         self.out = self.forward("out")
         self.enable_lookup = self.forward("enable_lookup")
 
+        # define necessary step types
         self.mimc7_first_step = self.step_type(Mimc7FirstStep(self, "mimc7_first_step"))
         self.mimc7_step = self.step_type(Mimc7Step(self, "mimc7_step"))
         self.mimc7_last_step = self.step_type(Mimc7LastStep(self, "mimc7_last_step"))
         self.mimc7_padding = self.step_type(Mimc7Padding(self, "mimc7_padding"))
 
+        # define circuit constraints
         self.pragma_first_step(self.mimc7_first_step)
         self.pragma_last_step(self.mimc7_padding)
         self.pragma_num_steps((ROUNDS + 2 - 1) * MAX_LEVELS)
 
+        # define lookup table to store the hashes and the inputs that generate them
         self.hashes_table = self.new_table(
             table()
             .add(self.enable_lookup)
@@ -155,12 +159,17 @@ class Mimc7MultiCircuit(Circuit):
         )
 
     def trace(self, x_values, k_value):
+        # compute hashes for every input
         for x_value in x_values:
             self.trace_single(x_value, k_value)
+        # fill with padding
         while self.needs_padding():
             self.add(self.mimc7_padding)
 
     def trace_single(self, x_in_value, k_value):
+        """
+        performs the hash logic, and adds all the necessary steps of a single compute
+        """
         c_value = F(ROUND_CONSTANTS[0])
         x_value = F(x_in_value)
         row_value = F(0)

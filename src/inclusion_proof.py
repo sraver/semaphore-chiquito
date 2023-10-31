@@ -45,19 +45,27 @@ class MtipLastStep(StepType):
 
 class MtipCircuit(Circuit):
     def setup(self):
+        # define signals
         self.hash = self.forward("hash")
 
+        # define necessary step types
         self.step = self.step_type(MtipStep(self, "step"))
         self.last_step = self.step_type(MtipLastStep(self, "last_step"))
 
+        # define circuit constraints
         self.pragma_num_steps(N_LEVELS + 1)
         self.pragma_first_step(self.step)
         self.pragma_last_step(self.last_step)
+
+        # define exposed signals
         self.expose(self.hash, Last())
 
     def trace(self, path_indices, inputs, hashes):
+        # for each level
         for i in range(0, N_LEVELS):
+            # add step with the results
             self.add(self.step, path_indices[i], hashes[i + 1], hashes[i], inputs[i])
+        # add final step to expose final hash
         self.add(self.last_step, hashes[N_LEVELS])
 
 
