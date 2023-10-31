@@ -12,43 +12,61 @@ from src.inclusion_proof import MtipCircuit
 N_LEVELS = 20
 
 
-class SemaphoreSignalStep(StepType):
-    """
-    This step will make sure the signal is not tampered
-    """
-
+class SemaphoreStep(StepType):
     def setup(self):
         # define internal signals
+        self.secret_input = self.internal("secret_input")
+        self.secret = self.internal("secret")
+        self.commitment = self.internal("commitment")
+        self.nullifier_input = self.internal("nullifier_input")
+        self.nullifier_hash = self.internal("nullifier_hash")
         self.signal_squared = self.internal("signal_squared")
+
         # constraints the signal squared the signal
         self.constr(eq(self.signal_squared, self.circuit.signal * self.circuit.signal))
 
-    def wg(self, signal):
-        self.assign(self.circuit.signal, F(signal))
-        self.assign(self.signal_squared, F(signal * signal))
-
-
-class SemaphoreHashes(StepType):
-    """
-    This step verifies that the given pair "clear_input <> hash" exist on the lookup table
-    """
-
-    def setup(self):
-        # define internal signals
-        self.hash = self.internal("hash")
-        self.clear_input = self.internal("clear_input")
-
-        # add a lookup table constraint to verify that used hashes are valid
+        # add lookup table constraints to verify that used hashes are valid
         self.add_lookup(
             self.circuit.hashes_table
             .apply(1)  # enable_lookup
+            # .apply(self.secret_input)  # x
             .apply(99)  # x // TODO : this hardcoded value should make it fail
-            .apply(self.hash)  # out
+            .apply(self.secret)  # out
+        )
+        self.add_lookup(
+            self.circuit.hashes_table
+            .apply(1)  # enable_lookup
+            .apply(self.secret)  # x
+            .apply(self.commitment)  # out
+        )
+        self.add_lookup(
+            self.circuit.hashes_table
+            .apply(1)  # enable_lookup
+            .apply(self.nullifier_input)  # x
+            .apply(self.nullifier_hash)  # out
         )
 
-    def wg(self, clear_input, hash_result):
-        self.assign(self.clear_input, F(clear_input))
-        self.assign(self.hash, F(hash_result))
+    def wg(
+            self,
+            identity_nullifier,
+            identity_trapdoor,
+            external_nullifier,
+            nullifier_hash,
+            signal_hash,
+            secret,
+            commitment
+    ):
+        # assign signal values
+        self.assign(self.circuit.signal, F(signal_hash))
+        self.assign(self.signal_squared, F(signal_hash * signal_hash))
+        # assign secret values
+        self.assign(self.secret_input, F(identity_nullifier + identity_trapdoor))
+        self.assign(self.secret, F(secret))
+        # assign commitment values
+        self.assign(self.commitment, F(commitment))
+        # assign nullifier values
+        self.assign(self.nullifier_input, F(identity_nullifier + external_nullifier))
+        self.assign(self.nullifier_hash, F(nullifier_hash))
 
 
 class SemaphoreCircuit(Circuit):
@@ -57,13 +75,11 @@ class SemaphoreCircuit(Circuit):
         self.signal = self.forward("signal")
 
         # define necessary step types
-        self.hashes_step = self.step_type(SemaphoreHashes(self, "hashes_step"))
-        self.signal_step = self.step_type(SemaphoreSignalStep(self, "signal_step"))
+        self.step = self.step_type(SemaphoreStep(self, "semaphore_step"))
 
         # define circuit constraints
-        self.pragma_first_step(self.hashes_step)
-        self.pragma_last_step(self.hashes_step)
-        self.pragma_num_steps(4)
+        self.pragma_first_step(self.step)
+        self.pragma_num_steps(1)
 
         # define exposed signals
         self.expose(self.signal, Last())
@@ -72,24 +88,23 @@ class SemaphoreCircuit(Circuit):
             self,
             identity_nullifier,
             identity_trapdoor,
-            secret,
-            commitment,
             external_nullifier,
             nullifier_hash,
-            signal_hash
+            signal_hash,
+            secret,
+            commitment,
     ):
-        # constrains and expose the signal
-        self.add(self.signal_step, signal_hash)
-
-        # constrains that `secret` is the resulting hash of `identity_nullifier + identity_trapdoor`
-        self.add(self.hashes_step, identity_nullifier + identity_trapdoor, secret)
-
-        # constrains that `commitment` is the resulting hash of `secret`
-        self.add(self.hashes_step, secret, commitment)
-
-        # constrains that `nullifier_hash` is the resulting hash of `identity_nullifier + external_nullifier`
-        self.add(self.hashes_step, identity_nullifier + external_nullifier, nullifier_hash)
-
+        self.add(
+            self.step,
+            identity_nullifier,
+            identity_trapdoor,
+            external_nullifier,
+            nullifier_hash,
+            signal_hash,
+            secret,
+            commitment
+        )
+        
 
 class SemaphoreSuperCircuit(SuperCircuit):
     def setup(self):
