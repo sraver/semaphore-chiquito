@@ -16,57 +16,46 @@ class MtipStep(StepType):
     def setup(self):
         self.index = self.internal("index")
         self.input = self.internal("input")
-        self.result = self.internal("result")
         self.constr(eq(self.index * (to_expr(1) - self.index), 0))
 
-        self.transition(eq(self.result, self.circuit.hash.next()))
+        self.transition(eq(self.circuit.result, self.circuit.hash.next()))
 
         self.add_lookup(
             self.circuit.hashes_table
             .apply(1)  # enable_lookup
-            .apply(1)  # TODO : this hardcoded value should make it fail
-            .apply(self.result)  # out
+            .apply(self.input)  # x
+            .apply(self.circuit.result)  # out
         )
 
     def wg(self, index_value, result_value, hash_value, input_value):
         self.assign(self.input, F(input_value))
         self.assign(self.index, F(index_value))
-        self.assign(self.result, F(result_value))
-        self.assign(self.circuit.hash, F(hash_value))
-
-
-class MtipLastStep(StepType):
-    def setup(self):
-        self.transition(eq(self.circuit.hash, self.circuit.hash.next()))
-
-    def wg(self, hash_value):
+        self.assign(self.circuit.result, F(result_value))
         self.assign(self.circuit.hash, F(hash_value))
 
 
 class MtipCircuit(Circuit):
     def setup(self):
         # define signals
+        self.result = self.forward("result")
         self.hash = self.forward("hash")
 
         # define necessary step types
         self.step = self.step_type(MtipStep(self, "step"))
-        self.last_step = self.step_type(MtipLastStep(self, "last_step"))
 
         # define circuit constraints
-        self.pragma_num_steps(N_LEVELS + 1)
+        self.pragma_num_steps(N_LEVELS)
         self.pragma_first_step(self.step)
-        self.pragma_last_step(self.last_step)
+        self.pragma_last_step(self.step)
 
         # define exposed signals
-        self.expose(self.hash, Last())
+        self.expose(self.result, Last())
 
     def trace(self, path_indices, inputs, hashes):
         # for each level
         for i in range(0, N_LEVELS):
             # add step with the results
             self.add(self.step, path_indices[i], hashes[i + 1], hashes[i], inputs[i])
-        # add final step to expose final hash
-        self.add(self.last_step, hashes[N_LEVELS])
 
 
 class MtipSuperCircuit(SuperCircuit):
