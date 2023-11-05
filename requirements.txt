@@ -1,2 +1,2 @@
-chiquito
+chiquito==0.1.2023110200
 pytest
