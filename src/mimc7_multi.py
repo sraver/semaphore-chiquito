@@ -55,7 +55,8 @@ class Mimc7FirstStep(StepType):
             self.circuit.constants_table.apply(self.circuit.row).apply(self.c)
         )
 
-    def wg(self, x_value, k_value, c_value, row_value):
+    def wg(self, i_value, x_value, k_value, c_value, row_value):
+        self.assign(self.circuit.original_input, F(i_value))
         self.assign(self.circuit.x, F(x_value))
         self.assign(self.circuit.k, F(k_value))
         self.assign(self.c, F(c_value))
@@ -96,7 +97,8 @@ class Mimc7Step(StepType):
             self.circuit.constants_table.apply(self.circuit.row).apply(self.c)
         )
 
-    def wg(self, x_value, k_value, c_value, row_value):
+    def wg(self, i_value, x_value, k_value, c_value, row_value):
+        self.assign(self.circuit.original_input, F(i_value))
         self.assign(self.circuit.x, F(x_value))
         self.assign(self.circuit.k, F(k_value))
         self.assign(self.c, F(c_value))
@@ -113,7 +115,8 @@ class Mimc7LastStep(StepType):
         self.constr(eq(self.circuit.x + self.circuit.k, self.circuit.out))
         self.constr(eq(self.circuit.enable_lookup, 1))
 
-    def wg(self, x_value, k_value, _, row_value):
+    def wg(self, i_value, x_value, k_value, _, row_value):
+        self.assign(self.circuit.original_input, F(i_value))
         self.assign(self.circuit.x, F(x_value))
         self.assign(self.circuit.k, F(k_value))
         self.assign(self.circuit.row, F(row_value))
@@ -138,6 +141,7 @@ class Mimc7MultiCircuit(Circuit):
         self.row = self.forward("row")
         self.out = self.forward("out")
         self.enable_lookup = self.forward("enable_lookup")
+        self.original_input = self.forward("original_input")
 
         # define necessary step types
         self.mimc7_first_step = self.step_type(Mimc7FirstStep(self, "mimc7_first_step"))
@@ -154,7 +158,7 @@ class Mimc7MultiCircuit(Circuit):
         self.hashes_table = self.new_table(
             table()
             .add(self.enable_lookup)
-            .add(self.x)
+            .add(self.original_input)
             .add(self.out)
         )
 
@@ -171,10 +175,11 @@ class Mimc7MultiCircuit(Circuit):
         performs the hash logic, and adds all the necessary steps of a single compute
         """
         c_value = F(ROUND_CONSTANTS[0])
+        i_value = F(x_in_value)
         x_value = F(x_in_value)
         row_value = F(0)
 
-        self.add(self.mimc7_first_step, x_value, k_value, c_value, row_value)
+        self.add(self.mimc7_first_step, i_value, x_value, k_value, c_value, row_value)
 
         for i in range(1, ROUNDS):
             row_value += F(1)
@@ -182,13 +187,13 @@ class Mimc7MultiCircuit(Circuit):
             x_value = F(x_value ** 7)
             c_value = F(ROUND_CONSTANTS[i])
 
-            self.add(self.mimc7_step, x_value, k_value, c_value, row_value)
+            self.add(self.mimc7_step, i_value, x_value, k_value, c_value, row_value)
 
         row_value += F(1)
         x_value += F(k_value + c_value)
         x_value = F(x_value ** 7)
 
-        self.add(self.mimc7_last_step, x_value, k_value, c_value, row_value)
+        self.add(self.mimc7_last_step, i_value, x_value, k_value, c_value, row_value)
 
 
 class Mimc7MultiSuperCircuit(SuperCircuit):

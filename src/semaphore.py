@@ -29,20 +29,19 @@ class SemaphoreStep(StepType):
         self.add_lookup(
             self.circuit.hashes_table
             .apply(1)  # enable_lookup
-            # .apply(self.secret_input)  # x
-            .apply(99)  # x // TODO : this hardcoded value should make it fail
+            .apply(self.secret_input)  # original_input
             .apply(self.secret)  # out
         )
         self.add_lookup(
             self.circuit.hashes_table
             .apply(1)  # enable_lookup
-            .apply(self.secret)  # x
+            .apply(self.secret)  # original_input
             .apply(self.commitment)  # out
         )
         self.add_lookup(
             self.circuit.hashes_table
             .apply(1)  # enable_lookup
-            .apply(self.nullifier_input)  # x
+            .apply(self.nullifier_input)  # original_input
             .apply(self.nullifier_hash)  # out
         )
 
@@ -167,11 +166,11 @@ class SemaphoreSuperCircuit(SuperCircuit):
             self.semaphore_circuit,
             identity_nullifier,
             identity_trapdoor,
-            secret,
-            commitment,
             external_nullifier,
             nullifier_hash,
-            signal_hash
+            signal_hash,
+            secret,
+            commitment,
         )
 
     def mimc7(self, x_in_value, k_value):
