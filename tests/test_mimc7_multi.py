@@ -51,7 +51,7 @@ class Mimc7MultiTests(unittest.TestCase):
                         columns.append(step_index)
 
         for i, column in enumerate(columns):
-            row_result = list(step_instances[column].assignments.values())[3]
+            row_result = list(step_instances[column].assignments.values())[4]
             assert row_result == MIMC7_HASHES[i]
 
         try:

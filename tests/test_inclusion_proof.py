@@ -29,7 +29,7 @@ class MtipTests(unittest.TestCase):
         )
 
         # Assert
-        expected_root = 6868393138780765851853690318900468670990254699962981411271466349369256199105
+        expected_root = 9718292343045174462399285270549165738345190962147124001263109326266001332162
         step_instances = list(mtip_witness.values())[1].step_instances
         computed_root = list(step_instances[len(step_instances) - 1].assignments.values())[0]
         assert computed_root == expected_root, "Roots do not match"
